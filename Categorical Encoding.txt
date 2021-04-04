@@ -1,0 +1,51 @@
+# Train a model (on the baseline data)
+train, valid, test = get_data_splits(data)
+train_model(train, valid)
+
+import category_encoders as ce
+cat_features = ['category', 'currency', 'country']
+
+# Create the encoder
+count_enc = ce.CountEncoder()
+
+# Transform the features, rename the columns with the _count suffix, and join to dataframe
+count_encoded = count_enc.fit_transform(ks[cat_features])
+data = data.join(count_encoded.add_suffix("_count"))
+
+# Train a model 
+train, valid, test = get_data_splits(data)
+train_model(train, valid)
+
+
+# Create the encoder
+target_enc = ce.TargetEncoder(cols=cat_features)
+target_enc.fit(train[cat_features], train['outcome'])
+
+# Transform the features, rename the columns with _target suffix, and join to dataframe
+train_TE = train.join(target_enc.transform(train[cat_features]).add_suffix('_target'))
+valid_TE = valid.join(target_enc.transform(valid[cat_features]).add_suffix('_target'))
+
+# Train a model
+train_model(train_TE, valid_TE)
+
+# Create the encoder
+target_enc = ce.CatBoostEncoder(cols=cat_features)
+target_enc.fit(train[cat_features], train['outcome'])
+
+# Transform the features, rename columns with _cb suffix, and join to dataframe
+train_CBE = train.join(target_enc.transform(train[cat_features]).add_suffix('_cb'))
+valid_CBE = valid.join(target_enc.transform(valid[cat_features]).add_suffix('_cb'))
+
+# Train a model
+train_model(train_CBE, valid_CBE)
+
+
+You should calculate the encodings from the training set only. If you include data from the validation and test sets into the encodings, you'll overestimate the model's performance. You should in general be vigilant to avoid leakage, that is, including any information from the validation and test sets into the model. For a review on this topic, see our lesson on data leakage.
+
+#Count Encoding
+
+Rare values tend to have similar counts (with values like 1 or 2), so you can classify rare values together at prediction time. Common values with large counts are unlikely to have the same exact count as other values. So, the common/important values get their own grouping.
+
+#Target Encoding
+
+Target encoding attempts to measure the population mean of the target for each level in a categorical feature. This means when there is less data per level, the estimated mean will be further away from the "true" mean, there will be more variance. There is little data per IP address so it's likely that the estimates are much noisier than for the other features. The model will rely heavily on this feature since it is extremely predictive. This causes it to make fewer splits on other features, and those features are fit on just the errors left over accounting for IP address. So, the model will perform very poorly when seeing new IP addresses that weren't in the training data (which is likely most new data). Going forward, we'll leave out the IP feature when trying different encodings.
