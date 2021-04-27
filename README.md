@@ -12,6 +12,7 @@ This Repository Contain Feature Engineering Techniques
 
 4.HOW TO HANDLE CATEGORICAL VARIABLE:
 
-##ONE-HOT ENCODING
-##LABEL ENCODING
+*ONE-HOT ENCODING
+
+*LABEL ENCODING
 
